@@ -1,0 +1,4 @@
+/js_brightness_detector/.cache/
+/js_brightness_detector/.idea/
+/js_brightness_detector/dist/
+*.DS_Store
