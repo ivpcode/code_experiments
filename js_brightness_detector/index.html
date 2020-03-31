@@ -38,6 +38,7 @@
       <div class="pure-g">
         <div class="pure-u-1-1">
           <p>Click on the image to process</p>
+          <div><input class="optimize" type="checkbox"  />&nbsp;Apply optimization to image size</div>
         </div>
         <div class="pure-u-1-1">
           <div class="pure-g">
@@ -64,6 +65,12 @@
             </div>
             <div class="pure-u-1-1 pure-u-sm-1-5">
               <img  src="./images/sky.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/fantasy.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/colors.jpg">
             </div>
             <div class="pure-u-1-1 pure-u-sm-1-5">
               <img  src="./images/bgi-5.jpg">
@@ -94,11 +101,13 @@
   $(document).ready(function(){
     $("img").click(function(){
       var imgurl = $(this).attr("src");
-      var ts = new Date().getTime();
-      GetImageQuadrantBrightness(imgurl,function (brightness_level) {
-        var te = new Date().getTime();
-        alert("Brightness Level: "+brightness_level + " - Elapsed time: "+((te-ts)).toFixed(1)+"[ms]");
-      });
+
+      var Optimize = null;
+      if ($(".optimize").is(":checked"))
+        Optimize = 512;
+      GetImageQuadrant0And3Brightness(imgurl,function (result) {
+        alert("Brightness Levels: "+JSON.stringify(result));
+      },Optimize);
     })
   })
 
@@ -205,7 +214,114 @@
     }
   }
 
-</script>
+
+  function GetImageQuadrant0And3Brightness(imageSrc, callback, MaxImageWidth) {
+    var img = document.createElement("img");
+    img.src = imageSrc;
+    img.style.display = "none";
+    document.body.appendChild(img);
+
+    var oTiming = {
+      ImgLoad: 0,
+      ImgDraw: 0,
+      ImgGetData: 0,
+      Q0Process: 0,
+      Q3Process: 0,
+    }
+
+    var _ts = new Date().getTime();
+    img.onload = function() {
+
+      oTiming.ImgLoad = new Date().getTime() - _ts;
+      _ts = new Date().getTime();
+
+      // crea il canvas
+      var canvas = document.createElement("canvas");
+      var imgW = this.width;
+      var imgH = this.height
+
+      // Se l'immagine è troppo grande la ridimensiona
+      if (MaxImageWidth!=null && imgW > MaxImageWidth) {
+        imgW = MaxImageWidth;
+        imgH = this.height * MaxImageWidth / this.width;
+      }
+
+      canvas.width = imgW;
+      canvas.height = imgH;
+
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(this,0,0,this.width,this.height,0,0,imgW,imgH);
+      oTiming.ImgDraw = new Date().getTime() - _ts;
+      _ts = new Date().getTime();
+
+      var imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      var data = imageData.data;
+      oTiming.ImgGetData = new Date().getTime() - _ts;
+      _ts = new Date().getTime();
+
+      var fnSampleQuadrant = function(canvas, ImageData,nQuadrant) {
+        var r,g,b,avg = 0;
+        var colorSum = 0;
+
+        var xs = 0;
+        var xe = Math.floor(canvas.width / 2);
+        var ys = 0;
+        var ye = Math.floor(canvas.height / 2);
+
+        switch (parseInt(nQuadrant))
+        {
+          case 1:
+            xs = Math.floor(canvas.width / 2)+1;
+            xe = canvas.width;
+            break;
+          case 2:
+            xs = Math.floor(canvas.width / 2)+1;
+            xe = canvas.width;
+            ys = Math.floor(canvas.height / 2)+1;
+            ye = canvas.height;
+            break;
+          case 3:
+            ys = Math.floor(canvas.height / 2)+1;
+            ye = canvas.height;
+            break;
+        }
+
+        var nSamples = 0;
+        for (var y=ys;y<ye;y++) {
+          for (var x = xs; x < xe; x++) {
+            var index = y * (canvas.width * 4) + x * 4;
+            r = data[index];
+            g = data[index+1];
+            b = data[index+2];
+            avg = Math.floor((r+g+b)/3);
+            colorSum += avg;
+            nSamples++;
+          }
+        }
+
+        return brightness = Math.round(colorSum / nSamples);
+      };
+
+      var BrgQ0 = fnSampleQuadrant(canvas,data,0);
+      oTiming.Q0Process = new Date().getTime() - _ts;
+      _ts = new Date().getTime();
+
+      var BrgQ3 = fnSampleQuadrant(canvas,data,3);
+      oTiming.Q3Process = new Date().getTime() - _ts;
+
+      oTiming.TotalElapsed = oTiming.ImgLoad + oTiming.ImgDraw + oTiming.ImgGetData + oTiming.Q0Process + oTiming.Q3Process;
+
+      callback({
+        "BrgQ0": BrgQ0,
+        "BrgQ3": BrgQ3,
+        "Timing": oTiming
+      });
+    }
+  }
+
+
+
+  </script>
 
 </body>
 
