@@ -42,7 +42,28 @@
         <div class="pure-u-1-1">
           <div class="pure-g">
             <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img src="./images/black_white.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
               <img src="./images/background.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/grass.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/nature1.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/nature2.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/nature3.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/bright.jpg">
+            </div>
+            <div class="pure-u-1-1 pure-u-sm-1-5">
+              <img  src="./images/sky.jpg">
             </div>
             <div class="pure-u-1-1 pure-u-sm-1-5">
               <img  src="./images/bgi-5.jpg">
@@ -70,21 +91,16 @@
           crossorigin="anonymous"></script>
   <script>
 
-    $(document).ready(function(){
-      $("img").click(function(){
-        var imgurl = $(this).attr("src");
-        GetImageBrightness(imgurl,function (brightness_level) {
-          alert("Brightness Level: "+brightness_level);
-        });
-      })
+  $(document).ready(function(){
+    $("img").click(function(){
+      var imgurl = $(this).attr("src");
+      var ts = new Date().getTime();
+      GetImageQuadrantBrightness(imgurl,function (brightness_level) {
+        var te = new Date().getTime();
+        alert("Brightness Level: "+brightness_level + " - Elapsed time: "+((te-ts)).toFixed(1)+"[ms]");
+      });
     })
-
-  function Process() {
-    var imgurl = $("input.txtImagUrl").val();
-    GetImageBrightness(imgurl,function (brightness_level) {
-      alert("Brightness Level: "+brightness_level);
-    });
-  }
+  })
 
   function GetImageBrightness(imageSrc,callback) {
     var img = document.createElement("img");
@@ -121,6 +137,73 @@
     }
   }
 
+  function GetImageQuadrantBrightness(imageSrc, callback) {
+    var img = document.createElement("img");
+    img.src = imageSrc;
+    img.style.display = "none";
+    document.body.appendChild(img);
+
+
+
+    img.onload = function() {
+      // crea il canvas
+      var canvas = document.createElement("canvas");
+      canvas.width = this.width;
+      canvas.height = this.height;
+
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(this,0,0);
+
+      var imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      var data = imageData.data;
+
+      var fnSampleQuadrant = function(canvas, ImageData,nQuadrant) {
+        var r,g,b,avg = 0;
+        var colorSum = 0;
+
+        var xs = 0;
+        var xe = Math.floor(canvas.width / 2);
+        var ys = 0;
+        var ye = Math.floor(canvas.height / 2);
+
+        switch (parseInt(nQuadrant))
+        {
+          case 1:
+            xs = Math.floor(canvas.width / 2)+1;
+            xe = canvas.width;
+            break;
+          case 2:
+            xs = Math.floor(canvas.width / 2)+1;
+            xe = canvas.width;
+            ys = Math.floor(canvas.height / 2)+1;
+            ye = canvas.height;
+            break;
+          case 3:
+            ys = Math.floor(canvas.height / 2)+1;
+            ye = canvas.height;
+            break;
+        }
+
+        var nSamples = 0;
+        for (var y=ys;y<ye;y++) {
+          for (var x = xs; x < xe; x++) {
+            var index = y * (canvas.width * 4) + x * 4;
+            r = data[index];
+            g = data[index+1];
+            b = data[index+2];
+            avg = Math.floor((r+g+b)/3);
+            colorSum += avg;
+            nSamples++;
+          }
+        }
+
+        return brightness = Math.round(colorSum / nSamples);
+      };
+
+
+      callback([fnSampleQuadrant(canvas,data,0),fnSampleQuadrant(canvas,data,1),fnSampleQuadrant(canvas,data,2),fnSampleQuadrant(canvas,data,3)]);
+    }
+  }
 
 </script>
 
